@@ -1,64 +1,11 @@
-## What we will do:
-- Get Setup for Spring Security
+<!---
+Current Directory : /Ranga/git/01.udemy-course-repos/spring-boot-master-class/02.Spring-Boot-Web-Application
+-->
+
+## Complete Code Example
 
 
-## Useful Snippets
-```
-        <dependency>
-            <groupId>org.springframework.boot</groupId>
-            <artifactId>spring-boot-starter-security</artifactId>
-        </dependency>
-
-package com.in28minutes.security;
-
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.context.annotation.Configuration;
-import org.springframework.security.config.annotation.authentication.builders.AuthenticationManagerBuilder;
-import org.springframework.security.config.annotation.web.builders.HttpSecurity;
-import org.springframework.security.config.annotation.web.configuration.WebSecurityConfigurerAdapter;
-import org.springframework.security.crypto.password.NoOpPasswordEncoder;
-
-@Configuration
-public class SecurityConfiguration extends WebSecurityConfigurerAdapter{
-	//Create User - in28Minutes/dummy
-	@Autowired
-    public void configureGlobalSecurity(AuthenticationManagerBuilder auth)
-            throws Exception {
-        auth.inMemoryAuthentication()
-            .passwordEncoder(NoOpPasswordEncoder.getInstance())
-        		.withUser("in28Minutes").password("dummy")
-                .roles("USER", "ADMIN");
-    }
-	
-	@Override
-    protected void configure(HttpSecurity http) throws Exception {
-        http.authorizeRequests().antMatchers("/login", "/h2-console/**").permitAll()
-                .antMatchers("/", "/*todo*/**").access("hasRole('USER')").and()
-                .formLogin();
-        
-        http.csrf().disable();
-        http.headers().frameOptions().disable();
-    }
-}
-
-```
-
-Not Needed anymore with Spring Boot Auto Configuration
-```
-	   <filter>
-	    		<filter-name>springSecurityFilterChain</filter-name>
-	    		<filter-class>org.springframework.web.filter.DelegatingFilterProxy</filter-class>
-	   </filter>
-	 
-	   <filter-mapping>
-	   		<filter-name>springSecurityFilterChain</filter-name>
-	    		<url-pattern>/*</url-pattern>
-	   </filter-mapping> 
-```
-
-## Files List
-
-### pom.xml
+### /pom.xml
 
 ```xml
 <?xml version="1.0" encoding="UTF-8"?>
@@ -67,7 +14,7 @@ Not Needed anymore with Spring Boot Auto Configuration
 	<modelVersion>4.0.0</modelVersion>
 
 	<groupId>com.in28minutes.springboot.web</groupId>
-	<artifactId>spring-boot-first-web-application</artifactId>
+	<artifactId>spring-boot-first-web-application-git</artifactId>
 	<version>0.0.1-SNAPSHOT</version>
 	<packaging>jar</packaging>
 
@@ -77,7 +24,7 @@ Not Needed anymore with Spring Boot Auto Configuration
 	<parent>
 		<groupId>org.springframework.boot</groupId>
 		<artifactId>spring-boot-starter-parent</artifactId>
-		<version>1.4.3.RELEASE</version>
+		<version>2.3.1.RELEASE</version> <!-- Step 33 -->
 		<relativePath /> <!-- lookup parent from repository -->
 	</parent>
 
@@ -85,12 +32,30 @@ Not Needed anymore with Spring Boot Auto Configuration
 		<project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
 		<project.reporting.outputEncoding>UTF-8</project.reporting.outputEncoding>
 		<java.version>1.8</java.version>
+		<maven-jar-plugin.version>3.1.1</maven-jar-plugin.version>
 	</properties>
 
 	<dependencies>
 		<dependency>
 			<groupId>org.springframework.boot</groupId>
 			<artifactId>spring-boot-starter-web</artifactId>
+		</dependency>
+
+		<!-- START AND STOP THE APPLICATION AFTER MAKING THE CHANGE! -->
+		<dependency>
+			<groupId>org.springframework.boot</groupId>
+			<artifactId>spring-boot-starter-validation</artifactId>
+		</dependency>
+
+		<dependency>
+			<groupId>org.springframework.boot</groupId>
+			<artifactId>spring-boot-starter-data-jpa</artifactId>
+		</dependency>
+
+		<dependency>
+			<groupId>com.h2database</groupId>
+			<artifactId>h2</artifactId>
+			<scope>runtime</scope>
 		</dependency>
 
 		<dependency>
@@ -108,13 +73,13 @@ Not Needed anymore with Spring Boot Auto Configuration
 			<artifactId>bootstrap</artifactId>
 			<version>3.3.6</version>
 		</dependency>
-		
+
 		<dependency>
 			<groupId>org.webjars</groupId>
 			<artifactId>bootstrap-datepicker</artifactId>
 			<version>1.0.1</version>
 		</dependency>
-		
+
 		<dependency>
 			<groupId>org.webjars</groupId>
 			<artifactId>jquery</artifactId>
@@ -149,40 +114,117 @@ Not Needed anymore with Spring Boot Auto Configuration
 		</plugins>
 	</build>
 
+	<repositories>
+		<repository>
+			<id>spring-milestones</id>
+			<name>Spring Milestones</name>
+			<url>https://repo.spring.io/milestones</url>
+		</repository>
+	</repositories>
+
+	<pluginRepositories>
+		<pluginRepository>
+			<id>spring-milestones</id>
+			<name>Spring Milestones</name>
+			<url>https://repo.spring.io/milestones</url>
+		</pluginRepository>
+	</pluginRepositories>
+
 </project>
 ```
 ---
-### src/main/java/com/in28minutes/springboot/web/controller/LoginController.java
+
+### /src/main/java/com/in28minutes/springboot/web/SpringBootFirstWebApplication.java
+
+```java
+package com.in28minutes.springboot.web;
+
+import org.springframework.boot.SpringApplication;
+import org.springframework.boot.autoconfigure.SpringBootApplication;
+import org.springframework.context.annotation.ComponentScan;
+
+@SpringBootApplication
+@ComponentScan("com.in28minutes.springboot.web")
+public class SpringBootFirstWebApplication {
+
+	public static void main(String[] args) {
+		SpringApplication.run(SpringBootFirstWebApplication.class, args);
+	}
+}
+```
+---
+
+### /src/main/java/com/in28minutes/springboot/web/controller/ErrorController.java
 
 ```java
 package com.in28minutes.springboot.web.controller;
 
-import org.springframework.beans.factory.annotation.Autowired;
+import javax.servlet.http.HttpServletRequest;
+import javax.servlet.http.HttpServletResponse;
+
 import org.springframework.stereotype.Controller;
-import org.springframework.ui.ModelMap;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RequestMethod;
-import org.springframework.web.bind.annotation.SessionAttributes;
+import org.springframework.web.bind.annotation.ExceptionHandler;
+import org.springframework.web.servlet.ModelAndView;
 
-import com.in28minutes.springboot.web.service.LoginService;
+@Controller("error")
+public class ErrorController {
+	
+	@ExceptionHandler(Exception.class)
+	public ModelAndView handleException
+		(HttpServletRequest request, Exception ex){
+		ModelAndView mv = new ModelAndView();
 
-@Controller
-@SessionAttributes("name")
-public class LoginController {
-
-	@Autowired
-	LoginService service;
-
-	@RequestMapping(value = "/", method = RequestMethod.GET)
-	public String showLoginPage(ModelMap model) {
-		model.put("name", "in28Minutes");
-		return "welcome";
+		mv.addObject("exception", ex.getLocalizedMessage());
+		mv.addObject("url", request.getRequestURL());
+		
+		mv.setViewName("error");
+		return mv;
 	}
 
 }
 ```
 ---
-### src/main/java/com/in28minutes/springboot/web/controller/TodoController.java
+
+### /src/main/java/com/in28minutes/springboot/web/controller/LogoutController.java
+
+```java
+package com.in28minutes.springboot.web.controller;
+
+import javax.servlet.http.HttpServletRequest;
+import javax.servlet.http.HttpServletResponse;
+
+import org.springframework.security.core.Authentication;
+import org.springframework.security.core.context.SecurityContextHolder;
+import org.springframework.security.core.userdetails.UserDetails;
+import org.springframework.security.web.authentication.logout.LogoutHandler;
+import org.springframework.security.web.authentication.logout.SecurityContextLogoutHandler;
+import org.springframework.stereotype.Controller;
+import org.springframework.ui.ModelMap;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestMethod;
+
+@Controller
+public class LogoutController {
+
+	@RequestMapping(value = "/logout", method = RequestMethod.GET)
+	public String logout(HttpServletRequest request,
+			HttpServletResponse response) {
+		
+		Authentication authentication = SecurityContextHolder.getContext()
+				.getAuthentication();
+		
+		if (authentication != null) {
+			new SecurityContextLogoutHandler().logout(request, response,
+					authentication);
+		}
+
+		return "redirect:/";
+	}
+}
+```
+---
+
+### /src/main/java/com/in28minutes/springboot/web/controller/TodoController.java
 
 ```java
 package com.in28minutes.springboot.web.controller;
@@ -194,6 +236,8 @@ import javax.validation.Valid;
 
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.propertyeditors.CustomDateEditor;
+import org.springframework.security.core.context.SecurityContextHolder;
+import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.ModelMap;
 import org.springframework.validation.BindingResult;
@@ -202,18 +246,15 @@ import org.springframework.web.bind.annotation.InitBinder;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestMethod;
 import org.springframework.web.bind.annotation.RequestParam;
-import org.springframework.web.bind.annotation.SessionAttributes;
 
 import com.in28minutes.springboot.web.model.Todo;
-import com.in28minutes.springboot.web.service.LoginService;
-import com.in28minutes.springboot.web.service.TodoService;
+import com.in28minutes.springboot.web.service.TodoRepository;
 
 @Controller
-@SessionAttributes("name")
 public class TodoController {
-
+	
 	@Autowired
-	TodoService service;
+	TodoRepository repository;
 
 	@InitBinder
 	public void initBinder(WebDataBinder binder) {
@@ -226,12 +267,20 @@ public class TodoController {
 	@RequestMapping(value = "/list-todos", method = RequestMethod.GET)
 	public String showTodos(ModelMap model) {
 		String name = getLoggedInUserName(model);
-		model.put("todos", service.retrieveTodos(name));
+		model.put("todos", repository.findByUser(name));
+		//model.put("todos", service.retrieveTodos(name));
 		return "list-todos";
 	}
 
 	private String getLoggedInUserName(ModelMap model) {
-		return (String) model.get("name");
+		Object principal = SecurityContextHolder.getContext()
+				.getAuthentication().getPrincipal();
+		
+		if (principal instanceof UserDetails) {
+			return ((UserDetails) principal).getUsername();
+		}
+		
+		return principal.toString();
 	}
 
 	@RequestMapping(value = "/add-todo", method = RequestMethod.GET)
@@ -243,13 +292,18 @@ public class TodoController {
 
 	@RequestMapping(value = "/delete-todo", method = RequestMethod.GET)
 	public String deleteTodo(@RequestParam int id) {
-		service.deleteTodo(id);
+
+		//if(id==1)
+			//throw new RuntimeException("Something went wrong");
+		repository.deleteById(id);
+		//service.deleteTodo(id);
 		return "redirect:/list-todos";
 	}
 
 	@RequestMapping(value = "/update-todo", method = RequestMethod.GET)
 	public String showUpdateTodoPage(@RequestParam int id, ModelMap model) {
-		Todo todo = service.retrieveTodo(id);
+		Todo todo = repository.findById(id).get();
+		//Todo todo = service.retrieveTodo(id);
 		model.put("todo", todo);
 		return "todo";
 	}
@@ -264,7 +318,8 @@ public class TodoController {
 
 		todo.setUser(getLoggedInUserName(model));
 
-		service.updateTodo(todo);
+		repository.save(todo);
+		//service.updateTodo(todo);
 
 		return "redirect:/list-todos";
 	}
@@ -276,25 +331,72 @@ public class TodoController {
 			return "todo";
 		}
 
-		service.addTodo(getLoggedInUserName(model), todo.getDesc(), todo.getTargetDate(),
-				false);
+		todo.setUser(getLoggedInUserName(model));
+		repository.save(todo);
+		/*service.addTodo(getLoggedInUserName(model), todo.getDesc(), todo.getTargetDate(),
+				false);*/
 		return "redirect:/list-todos";
 	}
 }
 ```
 ---
-### src/main/java/com/in28minutes/springboot/web/model/Todo.java
+
+### /src/main/java/com/in28minutes/springboot/web/controller/WelcomeController.java
+
+```java
+package com.in28minutes.springboot.web.controller;
+
+import org.springframework.security.core.context.SecurityContextHolder;
+import org.springframework.security.core.userdetails.UserDetails;
+import org.springframework.stereotype.Controller;
+import org.springframework.ui.ModelMap;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestMethod;
+
+@Controller
+public class WelcomeController {
+
+	@RequestMapping(value = "/", method = RequestMethod.GET)
+	public String showWelcomePage(ModelMap model) {
+		model.put("name", getLoggedinUserName());
+		return "welcome";
+	}
+
+	private String getLoggedinUserName() {
+		Object principal = SecurityContextHolder.getContext()
+				.getAuthentication().getPrincipal();
+		
+		if (principal instanceof UserDetails) {
+			return ((UserDetails) principal).getUsername();
+		}
+		
+		return principal.toString();
+	}
+
+}
+```
+---
+
+### /src/main/java/com/in28minutes/springboot/web/model/Todo.java
 
 ```java
 package com.in28minutes.springboot.web.model;
 
 import java.util.Date;
 
+import javax.persistence.Entity;
+import javax.persistence.GeneratedValue;
+import javax.persistence.Id;
 import javax.validation.constraints.Size;
 
+@Entity
 public class Todo {
-    private int id;
-    private String user;
+    
+	@Id
+	@GeneratedValue
+	private int id;
+    
+	private String user;
     
     @Size(min=10, message="Enter at least 10 Characters...")
     private String desc;
@@ -392,7 +494,8 @@ public class Todo {
 }
 ```
 ---
-### src/main/java/com/in28minutes/springboot/web/security/SecurityConfiguration.java
+
+### /src/main/java/com/in28minutes/springboot/web/security/SecurityConfiguration.java
 
 ```java
 package com.in28minutes.springboot.web.security;
@@ -402,6 +505,7 @@ import org.springframework.context.annotation.Configuration;
 import org.springframework.security.config.annotation.authentication.builders.AuthenticationManagerBuilder;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configuration.WebSecurityConfigurerAdapter;
+import org.springframework.security.crypto.password.NoOpPasswordEncoder;
 
 @Configuration
 public class SecurityConfiguration extends WebSecurityConfigurerAdapter{
@@ -409,40 +513,50 @@ public class SecurityConfiguration extends WebSecurityConfigurerAdapter{
 	@Autowired
     public void configureGlobalSecurity(AuthenticationManagerBuilder auth)
             throws Exception {
-        auth.inMemoryAuthentication().withUser("in28Minutes").password("dummy")
+        auth.inMemoryAuthentication()
+            .passwordEncoder(NoOpPasswordEncoder.getInstance())
+        		.withUser("in28Minutes").password("dummy")
                 .roles("USER", "ADMIN");
     }
 	
 	@Override
     protected void configure(HttpSecurity http) throws Exception {
-        http.authorizeRequests().antMatchers("/login").permitAll()
+        http.authorizeRequests().antMatchers("/login", "/h2-console/**").permitAll()
                 .antMatchers("/", "/*todo*/**").access("hasRole('USER')").and()
                 .formLogin();
+        
+        http.csrf().disable();
+        http.headers().frameOptions().disable();
     }
 }
 ```
 ---
-### src/main/java/com/in28minutes/springboot/web/service/LoginService.java
+
+### /src/main/java/com/in28minutes/springboot/web/service/TodoRepository.java
 
 ```java
 package com.in28minutes.springboot.web.service;
 
-import org.springframework.stereotype.Component;
-import org.springframework.stereotype.Service;
+import java.util.List;
 
-@Service
-public class LoginService {
+import org.springframework.data.jpa.repository.JpaRepository;
 
-	public boolean validateUser(String userid, String password) {
-		// in28minutes, dummy
-		return userid.equalsIgnoreCase("in28minutes")
-				&& password.equalsIgnoreCase("dummy");
-	}
+import com.in28minutes.springboot.web.model.Todo;
 
+public interface TodoRepository extends JpaRepository<Todo, Integer>{
+	List<Todo> findByUser(String user);
+	
+	//service.retrieveTodos(name)
+
+	//service.deleteTodo(id);
+	//service.retrieveTodo(id)
+	//service.updateTodo(todo)
+	//service.addTodo(getLoggedInUserName(model), todo.getDesc(), todo.getTargetDate(),false);
 }
 ```
 ---
-### src/main/java/com/in28minutes/springboot/web/service/TodoService.java
+
+### /src/main/java/com/in28minutes/springboot/web/service/TodoService.java
 
 ```java
 package com.in28minutes.springboot.web.service;
@@ -510,40 +624,39 @@ public class TodoService {
 }
 ```
 ---
-### src/main/java/com/in28minutes/springboot/web/SpringBootFirstWebApplication.java
 
-```java
-package com.in28minutes.springboot.web;
+### /src/main/resources/application.properties
 
-import org.springframework.boot.SpringApplication;
-import org.springframework.boot.autoconfigure.SpringBootApplication;
-import org.springframework.context.annotation.ComponentScan;
-
-@SpringBootApplication
-@ComponentScan("com.in28minutes.springboot.web")
-public class SpringBootFirstWebApplication {
-
-	public static void main(String[] args) {
-		SpringApplication.run(SpringBootFirstWebApplication.class, args);
-	}
-}
-```
----
-### src/main/resources/application.properties
-
-```
+```properties
 spring.mvc.view.prefix=/WEB-INF/jsp/
 spring.mvc.view.suffix=.jsp
 logging.level.org.springframework.web=INFO
+
+spring.jpa.show-sql=true
+spring.h2.console.enabled=true
 ```
 ---
-### src/main/webapp/WEB-INF/jsp/common/footer.jspf
+
+### /src/main/resources/data.sql
+
+```
+insert into TODO
+values(10001, 'Learn Spring Boot', false, sysdate(), 'in28Minutes');
+insert into TODO
+values(10002, 'Learn Angular JS', false, sysdate(), 'in28Minutes');
+insert into TODO
+values(10003, 'Learn to Dance', false, sysdate(), 'in28Minutes');
+```
+---
+
+### /src/main/webapp/WEB-INF/jsp/common/footer.jspf
 
 ```
 <script src="webjars/jquery/1.9.1/jquery.min.js"></script>
 <script src="webjars/bootstrap/3.3.6/js/bootstrap.min.js"></script>
 <script
 	src="webjars/bootstrap-datepicker/1.0.1/js/bootstrap-datepicker.js"></script>
+
 <script>
 	$('#targetDate').datepicker({
 		format : 'dd/mm/yyyy'
@@ -554,7 +667,8 @@ logging.level.org.springframework.web=INFO
 </html>
 ```
 ---
-### src/main/webapp/WEB-INF/jsp/common/header.jspf
+
+### /src/main/webapp/WEB-INF/jsp/common/header.jspf
 
 ```
 <%@ taglib uri="http://java.sun.com/jsp/jstl/core" prefix="c"%>
@@ -564,7 +678,7 @@ logging.level.org.springframework.web=INFO
 <html>
 
 <head>
-<title>First Web Application</title>
+<title>Spring Boot Normal Web Application</title>
 <link href="webjars/bootstrap/3.3.6/css/bootstrap.min.css"
 	rel="stylesheet">
 
@@ -573,23 +687,41 @@ logging.level.org.springframework.web=INFO
 <body>
 ```
 ---
-### src/main/webapp/WEB-INF/jsp/common/navigation.jspf
+
+### /src/main/webapp/WEB-INF/jsp/common/navigation.jspf
 
 ```
-	<nav role="navigation" class="navbar navbar-default">
-	    <div class="">
-	        <a href="http://www.in28minutes.com" class="navbar-brand">in28Minutes</a>
-	    </div>
-	    <div class="navbar-collapse">
-	        <ul class="nav navbar-nav">
-	            <li class="active"><a href="/">Home</a></li>
-	            <li><a href="/list-todos">Todos</a></li>
-	        </ul>
-	    </div>
-	</nav>
+
+<nav role="navigation" class="navbar navbar-default">
+	<div class="">
+		<a href="http://www.in28minutes.com" class="navbar-brand">in28Minutes</a>
+	</div>
+	<div class="navbar-collapse">
+		<ul class="nav navbar-nav">
+			<li class="active"><a href="/">Home</a></li>
+			<li><a href="/list-todos">Todos</a></li>
+		</ul>
+		<ul class="nav navbar-nav navbar-right">
+			<li><a href="/logout">Logout</a></li>
+		</ul>
+	</div>
+</nav>
 ```
 ---
-### src/main/webapp/WEB-INF/jsp/list-todos.jsp
+
+### /src/main/webapp/WEB-INF/jsp/error.jsp
+
+```
+<%@ include file="common/header.jspf"%>
+<%@ include file="common/navigation.jspf"%>
+<div class="container">
+An exception occurred! Please contact Support!
+</div>
+<%@ include file="common/footer.jspf"%>
+```
+---
+
+### /src/main/webapp/WEB-INF/jsp/list-todos.jsp
 
 ```
 <%@ include file="common/header.jspf" %>
@@ -628,13 +760,14 @@ logging.level.org.springframework.web=INFO
 <%@ include file="common/footer.jspf" %>
 ```
 ---
-### src/main/webapp/WEB-INF/jsp/todo.jsp
+
+### /src/main/webapp/WEB-INF/jsp/todo.jsp
 
 ```
 <%@ include file="common/header.jspf" %>
 <%@ include file="common/navigation.jspf" %>
 <div class="container">
-	<form:form method="post" commandName="todo">
+	<form:form method="post" modelAttribute="todo">
 		<form:hidden path="id" />
 		<fieldset class="form-group">
 			<form:label path="desc">Description</form:label>
@@ -656,7 +789,8 @@ logging.level.org.springframework.web=INFO
 <%@ include file="common/footer.jspf" %>
 ```
 ---
-### src/main/webapp/WEB-INF/jsp/welcome.jsp
+
+### /src/main/webapp/WEB-INF/jsp/welcome.jsp
 
 ```
 <%@ include file="common/header.jspf"%>
@@ -668,7 +802,8 @@ logging.level.org.springframework.web=INFO
 <%@ include file="common/footer.jspf"%>
 ```
 ---
-### src/test/java/com/in28minutes/springboot/web/SpringBootFirstWebApplicationTests.java
+
+### /src/test/java/com/in28minutes/springboot/web/SpringBootFirstWebApplicationTests.java
 
 ```java
 package com.in28minutes.springboot.web;
@@ -687,57 +822,5 @@ public class SpringBootFirstWebApplicationTests {
 	}
 
 }
-```
----
-### todo.txt
-
-```
-Implementing Server Side Validation
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-Command Bean or Form Backing Bean
-
-Add Validation
-Use Validation on Controller
-Display Errors in View
-
-Command Bean
-~~~~~~~~~~~~
-Controller
-View - Spring Form Tags
-
-
-
-LoginController -> adds name to model
-welcome.jsp -> shows ${name}
-
-TodoController -> redirects to list-todos.jsp
-${name} is empty 
-
-
-Component, Service, Repository, Controller
-Autowired
-ComponentScan
-
-Field dummyService in com.in28minutes.springboot.web.controller.LoginController 
-required a bean of type 'com.in28minutes.dummy.DummyService' 
-that could not be found.
-
-Spring Boot Starter Parent
-Spring Boot Starter Web
-@SpringBootApplication
-Auto Configuration
-
-Dispatcher Servlet
-
-/login => "login"
-
-"login" => src/main/webapp/WEB-INF/jsp/login.jsp 
-
-
-Search for a view named "login"
-
-
-
-/login => LoginController 
 ```
 ---

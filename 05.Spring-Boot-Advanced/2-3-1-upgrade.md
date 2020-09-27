@@ -1,80 +1,29 @@
-## What You Will Learn during this Step:
-- Configure different user roles for survey and other services
-- Update integration tests
-- Update unit tests
+<!---
+Current Directory : /Ranga/git/01.udemy-course-repos/spring-boot-master-class/05.Spring-Boot-Advanced
+-->
 
-## Useful Snippets and References
-First Snippet
-```
-package com.in28minutes.springboot.security;
+## Complete Code Example
 
-import org.springframework.context.annotation.Configuration;
-import org.springframework.security.config.annotation.authentication.builders.AuthenticationManagerBuilder;
-import org.springframework.security.config.annotation.web.builders.HttpSecurity;
-import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
-import org.springframework.security.config.annotation.web.configuration.WebSecurityConfigurerAdapter;
 
-@Configuration
-@EnableWebSecurity
-public class SecurityConfig extends WebSecurityConfigurerAdapter {
-    @Override
-    protected void configure(AuthenticationManagerBuilder auth)
-            throws Exception {
-        auth.inMemoryAuthentication().passwordEncoder(org.springframework.security.crypto.password.NoOpPasswordEncoder.getInstance()).withUser("user1").password("secret1")
-                .roles("USER").and().withUser("admin1").password("secret1")
-                .roles("ADMIN");
-    }
+### /pom.xml
 
-    @Override
-    protected void configure(HttpSecurity http) throws Exception {
-        http.httpBasic().and().authorizeRequests().antMatchers("/surveys/**")
-        .hasRole("USER").antMatchers("/users/**").hasRole("USER")
-                .antMatchers("/**").hasRole("ADMIN").and().csrf().disable()
-                .headers().frameOptions().disable();
-    }
-}
-```
-Second Snippet
-```
-    HttpHeaders headers = createHeaders("user1", "secret1");
-
-    HttpHeaders createHeaders(String username, String password) {
-        return new HttpHeaders() {
-            {
-                String auth = username + ":" + password;
-                byte[] encodedAuth = Base64.encode(auth.getBytes(Charset
-                        .forName("US-ASCII")));
-                String authHeader = "Basic " + new String(encodedAuth);
-                set("Authorization", authHeader);
-            }
-        };
-    }
-
-```
-
-Third Snippet
-```
-@WebMvcTest(value = SurveyController.class)
-@WithMockUser
-//OLD CODE - @WebMvcTest(value = SurveyController.class, secure = false)
-```
-## Files List
-### pom.xml
-```
+```xml
 <project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
 	xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
 	<modelVersion>4.0.0</modelVersion>
 	<groupId>com.in28minutes.springboot</groupId>
 	<artifactId>first-springboot-project</artifactId>
 	<version>0.0.1-SNAPSHOT</version>
+	
 	<parent>
 		<groupId>org.springframework.boot</groupId>
 		<artifactId>spring-boot-starter-parent</artifactId>
-		<version>1.4.0.RELEASE</version>
+		<version>2.3.1.RELEASE</version>
 	</parent>
 
 	<properties>
 		<java.version>1.8</java.version>
+		<maven-jar-plugin.version>3.1.1</maven-jar-plugin.version>
 	</properties>
 
 	<dependencies>
@@ -124,6 +73,12 @@ Third Snippet
             <artifactId>spring-boot-starter-test</artifactId>
             <scope>test</scope>
         </dependency>
+        
+        <dependency>
+		    <groupId>org.springframework.security</groupId>
+		    <artifactId>spring-security-test</artifactId>
+		    <scope>test</scope>
+		</dependency>
 	</dependencies>
 
 	<build>
@@ -136,8 +91,11 @@ Third Snippet
 	</build>
 </project>
 ```
-### src/main/java/com/in28minutes/springboot/Application.java
-```
+---
+
+### /src/main/java/com/in28minutes/springboot/Application.java
+
+```java
 package com.in28minutes.springboot;
 
 import org.springframework.boot.SpringApplication;
@@ -161,8 +119,77 @@ public class Application {
 	}
 }
 ```
-### src/main/java/com/in28minutes/springboot/configuration/BasicConfiguration.java
+---
+
+### /src/main/java/com/in28minutes/springboot/WelcomeController.java
+
+```java
+package com.in28minutes.springboot;
+
+import java.util.HashMap;
+import java.util.Map;
+
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RestController;
+
+import com.in28minutes.springboot.configuration.BasicConfiguration;
+
+@RestController
+public class WelcomeController {
+
+	//Auto wiring
+	@Autowired
+	private WelcomeService service;
+
+	@Autowired
+	private BasicConfiguration configuration;
+
+	@RequestMapping("/welcome")
+	public String welcome() {
+		return service.retrieveWelcomeMessage();
+	}
+
+	@RequestMapping("/dynamic-configuration")
+	public Map dynamicConfiguration() {
+		Map map = new HashMap();
+		map.put("message", configuration.getMessage());
+		map.put("number", configuration.getNumber());
+		map.put("value", configuration.isValue());
+
+		return map;
+	}
+
+}
 ```
+---
+
+### /src/main/java/com/in28minutes/springboot/WelcomeService.java
+
+```java
+package com.in28minutes.springboot;
+
+import org.springframework.beans.factory.annotation.Value;
+import org.springframework.stereotype.Component;
+
+//Spring to manage this bean and create an instance of this
+@Component
+public class WelcomeService {
+
+	@Value("${welcome.message}")
+	private String welcomeMessage;
+
+	public String retrieveWelcomeMessage() {
+		//Complex Method
+		return welcomeMessage;
+	}
+}
+```
+---
+
+### /src/main/java/com/in28minutes/springboot/configuration/BasicConfiguration.java
+
+```java
 package com.in28minutes.springboot.configuration;
 
 import org.springframework.boot.context.properties.ConfigurationProperties;
@@ -200,8 +227,11 @@ public class BasicConfiguration {
 	}
 }
 ```
-### src/main/java/com/in28minutes/springboot/controller/SurveyController.java
-```
+---
+
+### /src/main/java/com/in28minutes/springboot/controller/SurveyController.java
+
+```java
 package com.in28minutes.springboot.controller;
 
 import java.net.URI;
@@ -259,8 +289,11 @@ class SurveyController {
 
 }
 ```
-### src/main/java/com/in28minutes/springboot/jpa/User.java
-```
+---
+
+### /src/main/java/com/in28minutes/springboot/jpa/User.java
+
+```java
 package com.in28minutes.springboot.jpa;
 
 import javax.persistence.Entity;
@@ -306,8 +339,11 @@ public class User {
 
 }
 ```
-### src/main/java/com/in28minutes/springboot/jpa/UserCommandLineRunner.java
-```
+---
+
+### /src/main/java/com/in28minutes/springboot/jpa/UserCommandLineRunner.java
+
+```java
 package com.in28minutes.springboot.jpa;
 
 import org.slf4j.Logger;
@@ -347,8 +383,11 @@ public class UserCommandLineRunner implements CommandLineRunner {
 
 }
 ```
-### src/main/java/com/in28minutes/springboot/jpa/UserRepository.java
-```
+---
+
+### /src/main/java/com/in28minutes/springboot/jpa/UserRepository.java
+
+```java
 package com.in28minutes.springboot.jpa;
 
 import java.util.List;
@@ -359,8 +398,11 @@ public interface UserRepository extends CrudRepository<User, Long> {
 	List<User> findByRole(String role);
 }
 ```
-### src/main/java/com/in28minutes/springboot/jpa/UserRestRepository.java
-```
+---
+
+### /src/main/java/com/in28minutes/springboot/jpa/UserRestRepository.java
+
+```java
 package com.in28minutes.springboot.jpa;
 
 import java.util.List;
@@ -375,8 +417,11 @@ public interface UserRestRepository extends
 	List<User> findByRole(@Param("role") String role);
 }
 ```
-### src/main/java/com/in28minutes/springboot/model/Question.java
-```
+---
+
+### /src/main/java/com/in28minutes/springboot/model/Question.java
+
+```java
 package com.in28minutes.springboot.model;
 
 import java.util.List;
@@ -459,8 +504,11 @@ public class Question {
 
 }
 ```
-### src/main/java/com/in28minutes/springboot/model/Survey.java
-```
+---
+
+### /src/main/java/com/in28minutes/springboot/model/Survey.java
+
+```java
 package com.in28minutes.springboot.model;
 
 import java.util.List;
@@ -520,8 +568,11 @@ public class Survey {
 
 }
 ```
-### src/main/java/com/in28minutes/springboot/security/SecurityConfig.java
-```
+---
+
+### /src/main/java/com/in28minutes/springboot/security/SecurityConfig.java
+
+```java
 package com.in28minutes.springboot.security;
 
 import org.springframework.context.annotation.Configuration;
@@ -550,8 +601,11 @@ public class SecurityConfig extends WebSecurityConfigurerAdapter {
 
 }
 ```
-### src/main/java/com/in28minutes/springboot/service/SurveyService.java
-```
+---
+
+### /src/main/java/com/in28minutes/springboot/service/SurveyService.java
+
+```java
 package com.in28minutes.springboot.service;
 
 import java.math.BigInteger;
@@ -648,76 +702,25 @@ public class SurveyService {
 	}
 }
 ```
-### src/main/java/com/in28minutes/springboot/WelcomeController.java
-```
-package com.in28minutes.springboot;
+---
 
-import java.util.HashMap;
-import java.util.Map;
+### /src/main/resources/application-dev.properties
 
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RestController;
-
-import com.in28minutes.springboot.configuration.BasicConfiguration;
-
-@RestController
-public class WelcomeController {
-
-	//Auto wiring
-	@Autowired
-	private WelcomeService service;
-
-	@Autowired
-	private BasicConfiguration configuration;
-
-	@RequestMapping("/welcome")
-	public String welcome() {
-		return service.retrieveWelcomeMessage();
-	}
-
-	@RequestMapping("/dynamic-configuration")
-	public Map dynamicConfiguration() {
-		Map map = new HashMap();
-		map.put("message", configuration.getMessage());
-		map.put("number", configuration.getNumber());
-		map.put("value", configuration.isValue());
-
-		return map;
-	}
-
-}
-```
-### src/main/java/com/in28minutes/springboot/WelcomeService.java
-```
-package com.in28minutes.springboot;
-
-import org.springframework.beans.factory.annotation.Value;
-import org.springframework.stereotype.Component;
-
-//Spring to manage this bean and create an instance of this
-@Component
-public class WelcomeService {
-
-	@Value("${welcome.message}")
-	private String welcomeMessage;
-
-	public String retrieveWelcomeMessage() {
-		//Complex Method
-		return welcomeMessage;
-	}
-}
-```
-### src/main/resources/application-dev.properties
-```
+```properties
 logging.level.org.springframework: TRACE
 ```
-### src/main/resources/application-prod.properties
-```
+---
+
+### /src/main/resources/application-prod.properties
+
+```properties
 logging.level.org.springframework: INFO
 ```
-### src/main/resources/application.properties
-```
+---
+
+### /src/main/resources/application.properties
+
+```properties
 logging.level.org.springframework: DEBUG
 app.name=in28Minutes
 welcome.message=Welcome message from property file! Welcome to ${app.name}
@@ -726,8 +729,11 @@ basic.value=true
 basic.message=Welcome to in28minutes
 basic.number=200
 ```
-### src/test/java/com/in28minutes/springboot/controller/SurveyControllerIT.java
-```
+---
+
+### /src/test/java/com/in28minutes/springboot/controller/SurveyControllerIT.java
+
+```java
 package com.in28minutes.springboot.controller;
 
 import static org.junit.Assert.assertTrue;
@@ -736,13 +742,14 @@ import java.nio.charset.Charset;
 import java.util.Arrays;
 import java.util.List;
 
+import org.json.JSONException;
 import org.junit.Before;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.skyscreamer.jsonassert.JSONAssert;
-import org.springframework.boot.context.embedded.LocalServerPort;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.test.web.client.TestRestTemplate;
+import org.springframework.boot.web.server.LocalServerPort;
 import org.springframework.core.ParameterizedTypeReference;
 import org.springframework.http.HttpEntity;
 import org.springframework.http.HttpHeaders;
@@ -775,7 +782,7 @@ public class SurveyControllerIT {
 	}
 
 	@Test
-	public void testRetrieveSurveyQuestion() {
+	public void testRetrieveSurveyQuestion() throws JSONException {
 
 		HttpEntity<String> entity = new HttpEntity<String>(null, headers);
 
@@ -783,7 +790,7 @@ public class SurveyControllerIT {
 				createURLWithPort("/surveys/Survey1/questions/Question1"),
 				HttpMethod.GET, entity, String.class);
 
-		String expected = "{id:Question1,description:Largest Country in the World,correctAnswer:Russia}";
+		String expected = "{id:Question1,description:\"Largest Country in the World\",correctAnswer:Russia}";
 
 		JSONAssert.assertEquals(expected, response.getBody(), false);
 	}
@@ -842,8 +849,11 @@ public class SurveyControllerIT {
 
 }
 ```
-### src/test/java/com/in28minutes/springboot/controller/SurveyControllerTest.java
-```
+---
+
+### /src/test/java/com/in28minutes/springboot/controller/SurveyControllerTest.java
+
+```java
 package com.in28minutes.springboot.controller;
 
 import static org.junit.Assert.assertEquals;
@@ -861,6 +871,7 @@ import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.mock.web.MockHttpServletResponse;
+import org.springframework.security.test.context.support.WithMockUser;
 import org.springframework.test.context.junit4.SpringRunner;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.MvcResult;
@@ -871,7 +882,8 @@ import com.in28minutes.springboot.model.Question;
 import com.in28minutes.springboot.service.SurveyService;
 
 @RunWith(SpringRunner.class)
-@WebMvcTest(value = SurveyController.class, secure = false)
+@WebMvcTest(value = SurveyController.class)
+@WithMockUser
 public class SurveyControllerTest {
 
 	@Autowired
@@ -897,7 +909,7 @@ public class SurveyControllerTest {
 
 		MvcResult result = mockMvc.perform(requestBuilder).andReturn();
 
-		String expected = "{id:Question1,description:Largest Country in the World,correctAnswer:Russia}";
+		String expected = "{id:Question1,description:\"Largest Country in the World\",correctAnswer:Russia}";
 
 		JSONAssert.assertEquals(expected, result.getResponse()
 				.getContentAsString(), false);
@@ -933,3 +945,4 @@ public class SurveyControllerTest {
 	}
 }
 ```
+---
